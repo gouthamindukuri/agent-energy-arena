@@ -12,8 +12,11 @@ PYTHON ?= $(shell \
 	else echo python3; fi)
 
 # Interpreter used to create .venv. Must satisfy requires-python (>=3.11);
-# macOS system python3 is 3.9, so default to an explicit 3.11+ binary.
-VENV_PYTHON ?= python3.12
+# macOS system python3 is 3.9, so pick the first available 3.11+ binary.
+VENV_PYTHON ?= $(shell \
+	for py in python3.13 python3.12 python3.11 python3; do \
+		if command -v $$py >/dev/null 2>&1; then echo $$py; break; fi; \
+	done)
 
 .PHONY: help venv install test typecheck lint format format-check check serve play eval score clean
 

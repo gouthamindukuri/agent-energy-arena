@@ -11,6 +11,10 @@ PYTHON ?= $(shell \
 	elif [ -x ".venv/bin/python" ]; then echo ".venv/bin/python"; \
 	else echo python3; fi)
 
+# Interpreter used to create .venv. Must satisfy requires-python (>=3.11);
+# macOS system python3 is 3.9, so default to an explicit 3.11+ binary.
+VENV_PYTHON ?= python3.12
+
 .PHONY: help venv install test typecheck lint format format-check check serve play eval score clean
 
 help:
@@ -29,11 +33,11 @@ help:
 	@echo "  score         Run the scripted agent on seed 42 and print the score line"
 
 venv:
-	@test -d .venv || python3 -m venv .venv
+	@test -d .venv || $(VENV_PYTHON) -m venv .venv
 	@$(PYTHON) -m pip install --upgrade pip >/dev/null
 
 install: venv
-	$(PYTHON) -m pip install -e ".[dev]"
+	$(PYTHON) -m pip install -e ".[dev,llm]"
 
 test:
 	$(PYTHON) -m pytest

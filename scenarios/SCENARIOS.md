@@ -20,6 +20,7 @@ This guide lives next to the scenario modules it documents. If you're writing or
   - [`scenarios.baseline`](#scenariosbaseline)
   - [`scenarios.grid_stress`](#scenariosgrid_stress)
   - [`scenarios.economy_stress`](#scenarioseconomy_stress)
+  - [`scenarios.constraint_stress`](#scenariosconstraint_stress)
 - [Authoring a new scenario](#authoring-a-new-scenario)
 - [Submitting a scenario](#submitting-a-scenario)
 
@@ -85,11 +86,17 @@ These live on `WorldState` (defaults shown). A scenario can write directly:
 | `state.crude_price_usd_per_bbl` | 40.0 | Unrouted crude sale price ($/bbl). |
 | `state.refined_price_usd_per_bbl` | 90.0 | Refined product sale price ($/bbl). |
 | `state.grid_price_retail` | 0.08 | Local kWh-served price ($/kWh). |
-| `state.grid_price_export` | 0.04 | Curtailment export price ($/kWh). |
+| `state.grid_price_export` | 0.04 | Saleable external export price ($/kWh). |
+| `state.grid_transfer_capacity_kw` | 1,000,000 | North/south grid transfer limit before upgrades. |
+| `state.grid_external_export_capacity_kw` | 1,000,000 | Saleable external export capacity. |
+| `state.transmission_line_capacity_kw` | 250 | Transfer capacity added by each `transmission_line`. |
+| `state.curtailment_compensation_per_kwh` | 0.0 | Cost paid for stranded renewable curtailment. |
+| `state.replacement_energy_cost_per_kwh` | 0.0 | Cost paid for redispatch/replacement energy. |
 | `state.industrial_revenue_per_day` | 500.0 | Per staffed industrial slot. |
-| `state.commercial_revenue_per_resident_per_day` | 1.0 | Per nearby resident × occupancy. |
+| `state.commercial_revenue_per_resident_per_day` | 2.0 | Per nearby resident × occupancy. |
 | `state.daily_tax_per_capita` | 4.0 | Per-resident daily tax. |
-| `state.blackout_penalty_hour` | 5000.0 | $/hour deducted while balance_state = blackout. |
+| `state.outage_penalty_hour` | 4000.0 | $/hour deducted while balance_state = blackout. |
+| `state.brownout_flat_penalty_hour` | 1000.0 | Brownout penalty floor before unserved-share ramp. |
 | `state.carbon_price` | 25.0 | $/t CO₂. `regulatory_tightening` events also touch this. |
 | `state.plant_fuel_cost_per_mwh` | `{coal_plant: 12, gas_peaker: 30}` | Per-plant fuel cost ($/MWh). |
 
@@ -193,7 +200,7 @@ The world is fully deterministic given `(seed, action log)`. Scenarios participa
 
 ## v1 shipped scenarios
 
-All three are seed-42 by default and ship as sibling modules in this package.
+All four are seed-42 by default and ship as sibling modules in this package.
 
 ### `scenarios.baseline`
 
@@ -219,6 +226,22 @@ Stresses the **economic surface**. Three layered pressure sources:
 - **Regulatory tightening.** Day 30: a permanent `carbon_price × 2.0` step; an `active_events` marker tagged with `REGULATORY_DURATION_DAYS=200` exists for run-log visibility and auto-expires through `expire_finite_events`. The carbon-price step is NOT restored — the regulatory bump is permanent, matching the stochastic sampler's semantics.
 
 Source: [`economy_stress.py`](economy_stress.py).
+
+### `scenarios.constraint_stress`
+
+Stresses the **network-planning surface**. It activates the two-zone grid model
+by lowering north/south transfer capacity and external export capacity:
+
+- **Transmission bottleneck.** `grid_transfer_capacity_kw` is held at 300 kW, so
+  generation stranded in one zone cannot fully serve demand in the other zone.
+- **Export bottleneck.** `grid_external_export_capacity_kw` is held at 75 kW, so
+  renewable surplus can become compensated curtailment rather than export
+  revenue.
+- **Redispatch economics.** Replacement energy costs $0.18/kWh and stranded
+  renewable curtailment costs $0.06/kWh. Building `transmission_line` tiles adds
+  250 kW of transfer capacity per line.
+
+Source: [`constraint_stress.py`](constraint_stress.py).
 
 ## Authoring a new scenario
 

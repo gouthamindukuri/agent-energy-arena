@@ -23,7 +23,15 @@ def test_catalog_lists_civilian_tiles(tmp_path: Path) -> None:
     catalog = client.get("/catalog").json()
     types = {entry["tile_type"] for entry in catalog["tiles"]}
     # Civilian tiles required by issue 02.
-    for required in ("road", "house", "commercial", "industrial", "park", "pipeline"):
+    for required in (
+        "road",
+        "house",
+        "commercial",
+        "industrial",
+        "park",
+        "pipeline",
+        "transmission_line",
+    ):
         assert required in types, types
     by_type = {entry["tile_type"]: entry for entry in catalog["tiles"]}
     assert by_type["road"]["capex"] == 500

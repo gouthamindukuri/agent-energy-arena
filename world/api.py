@@ -561,6 +561,12 @@ def create_app(
                         "cumulative_total_served_kwh": state.get(
                             "cumulative_total_served_kwh", 0.0
                         ),
+                        "cumulative_curtailed_renewable_kwh": state.get(
+                            "cumulative_curtailed_renewable_kwh", 0.0
+                        ),
+                        "cumulative_replacement_energy_kwh": state.get(
+                            "cumulative_replacement_energy_kwh", 0.0
+                        ),
                     }
                 )
         return compute_score(snapshots, float(world.config.starting_cash))

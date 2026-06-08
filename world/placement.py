@@ -29,7 +29,9 @@ HALO_TYPES: frozenset[str] = frozenset({"coal_plant", "gas_peaker", "wind_turbin
 # feed gas peakers (the dispatch rule in `world.pipelines` requires a
 # pipeline neighbor, so the halo must let one in). town_hall is
 # road-network-equivalent (see `world.grid.ROAD_TYPES`).
-HALO_ADMITTED_NEIGHBORS: frozenset[str] = frozenset({"road", "battery", "town_hall", "pipeline"})
+HALO_ADMITTED_NEIGHBORS: frozenset[str] = frozenset(
+    {"road", "battery", "town_hall", "pipeline", "transmission_line"}
+)
 
 # Fixed scan order for the 8-neighborhood. Returning the first non-admitted
 # neighbor in this order makes the rejection deterministic when multiple

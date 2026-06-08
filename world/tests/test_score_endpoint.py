@@ -33,6 +33,9 @@ COMPONENT_KEYS = {
     "axis_happy",
     "R",
     "renewable_share",
+    "grid_efficiency",
+    "cumulative_curtailed_renewable_kwh",
+    "cumulative_replacement_energy_kwh",
     "solvency",
     "longevity",
 }

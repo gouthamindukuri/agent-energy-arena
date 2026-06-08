@@ -317,10 +317,10 @@ def settle_eod_treasury(state: WorldState) -> None:
     """End-of-day treasury settle for power-side accumulators.
 
     ``commit_tick`` accumulated ``today.power_revenue`` (civilian retail +
-    curtailment export) and ``today.outage_penalty`` (per-hour outage
-    cost scaled by the civilian-unserved fraction) across the day's 24
-    ticks. This applies both to treasury in one shot: credit revenue,
-    debit penalty.
+    explicit export), ``today.outage_penalty`` (per-hour outage cost), and
+    grid-constraint costs (curtailment compensation + replacement energy)
+    across the day's 24 ticks. This applies them to treasury in one shot:
+    credit revenue, debit penalties/costs.
 
     The pattern is deliberately symmetric with ``settle_opex`` /
     ``settle_fuel`` / ``settle_carbon``: per-hour accumulators move
@@ -328,6 +328,8 @@ def settle_eod_treasury(state: WorldState) -> None:
     """
     state.treasury += state.today.power_revenue
     state.treasury -= state.today.outage_penalty
+    state.treasury -= state.today.constraint_payment
+    state.treasury -= state.today.replacement_energy_cost
 
 
 def pin_yesterday(state: WorldState) -> None:

@@ -1309,16 +1309,25 @@
     const peakD = preview.peak_demand_kw || 0;
     const peakS = preview.peak_supply_kw || 0;
     const margin = preview.min_reserve_margin || 0;
+    const sum = (series) => (series || []).reduce((a, b) => a + (Number(b) || 0), 0);
+    const projectedCurtailment = sum(preview.curtailed_renewable_kw_by_hour);
+    const projectedReplacement = sum(preview.replacement_energy_kw_by_hour);
+    const projectedExport = sum(preview.exported_kw_by_hour);
     const pct = (margin * 100).toFixed(0);
     let tone = "ok";
     if (margin < 0) tone = "blackout";
     else if (margin < 0.15) tone = "brownout";
     else if (margin > 0.5) tone = "curtailment";
     marginEl.className = `power-margin ${tone}`;
+    const constraintLine =
+      projectedCurtailment || projectedReplacement || projectedExport
+        ? `<span class="pm-sub">projected grid: ${fmtNum(projectedExport)} kWh export · ${fmtNum(projectedCurtailment)} kWh curtailed · ${fmtNum(projectedReplacement)} kWh replacement</span>`
+        : "";
     marginEl.innerHTML =
       `<span class="pm-label">Worst-hour reserve</span>` +
       `<span class="pm-val">${pct >= 0 ? "+" : ""}${pct}%</span>` +
-      `<span class="pm-sub">peak ${Math.round(peakD)} kW demand · ${Math.round(peakS)} kW supply</span>`;
+      `<span class="pm-sub">peak ${Math.round(peakD)} kW demand · ${Math.round(peakS)} kW supply</span>` +
+      constraintLine;
   }
 
   function renderPlantList(allTiles) {
@@ -1643,13 +1652,16 @@
       ["Tax revenue", summary.tax_revenue || 0, "+"],
       ["Commercial revenue", summary.commercial_revenue || 0, "+"],
       ["Industrial revenue", summary.industrial_revenue || 0, "+"],
-      ["Power revenue", summary.power_revenue || 0, "+"],
+      ["Retail power", summary.retail_power_revenue ?? summary.power_revenue ?? 0, "+"],
+      ["Export revenue", summary.export_revenue || 0, "+"],
       ["Crude (direct sale)", summary.crude_revenue || 0, "+"],
       ["Refined oil", summary.refined_revenue || 0, "+"],
       ["OPEX", -(summary.opex || 0), "-"],
       ["Fuel cost", -(summary.fuel_cost || 0), "-"],
       ["Carbon cost", -(summary.carbon_cost || 0), "-"],
       ["Outage penalty", -(summary.outage_penalty || 0), "-"],
+      ["Constraint payments", -(summary.constraint_payment || 0), "-"],
+      ["Replacement energy", -(summary.replacement_energy_cost || 0), "-"],
     ];
     for (const [label, value, sign] of rows) {
       const li = document.createElement("li");

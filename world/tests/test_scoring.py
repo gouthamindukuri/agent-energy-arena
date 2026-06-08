@@ -52,6 +52,9 @@ COMPONENT_KEYS = {
     "axis_happy",
     "R",
     "renewable_share",
+    "grid_efficiency",
+    "cumulative_curtailed_renewable_kwh",
+    "cumulative_replacement_energy_kwh",
     "solvency",
     "longevity",
 }
@@ -64,6 +67,8 @@ def _snapshot(
     happiness: float,
     renewable_kwh: float = 0.0,
     total_kwh: float = 0.0,
+    curtailed_kwh: float = 0.0,
+    replacement_kwh: float = 0.0,
 ) -> dict[str, Any]:
     return {
         "treasury": treasury,
@@ -71,6 +76,8 @@ def _snapshot(
         "happiness": happiness,
         "cumulative_renewable_served_kwh": renewable_kwh,
         "cumulative_total_served_kwh": total_kwh,
+        "cumulative_curtailed_renewable_kwh": curtailed_kwh,
+        "cumulative_replacement_energy_kwh": replacement_kwh,
     }
 
 

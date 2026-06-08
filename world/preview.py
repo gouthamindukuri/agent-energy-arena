@@ -75,6 +75,11 @@ def preview_next_day(world: World) -> dict[str, Any]:
         "coal": [],
         "gas": [],
     }
+    exported_by_hour: list[float] = []
+    curtailed_renewable_by_hour: list[float] = []
+    replacement_energy_by_hour: list[float] = []
+    transfer_north_to_south_by_hour: list[float] = []
+    transfer_south_to_north_by_hour: list[float] = []
 
     for h in range(cfg.ticks_per_day):
         result = hourly_tick(
@@ -85,6 +90,11 @@ def preview_next_day(world: World) -> dict[str, Any]:
         balance_by_hour.append(result.balance)
         for key in source_by_hour:
             source_by_hour[key].append(float(result.by_source[key]))
+        exported_by_hour.append(float(result.exported_kw))
+        curtailed_renewable_by_hour.append(float(result.curtailed_renewable_kw))
+        replacement_energy_by_hour.append(float(result.replacement_energy_kw))
+        transfer_north_to_south_by_hour.append(float(result.transfer_north_to_south_kw))
+        transfer_south_to_north_by_hour.append(float(result.transfer_south_to_north_kw))
         prev_outputs = result.outputs
         prev_balance = result.balance
 
@@ -102,6 +112,11 @@ def preview_next_day(world: World) -> dict[str, Any]:
         "demand_kw_by_hour": demand_by_hour,
         "balance_state_by_hour": balance_by_hour,
         "by_source_kw_by_hour": source_by_hour,
+        "exported_kw_by_hour": exported_by_hour,
+        "curtailed_renewable_kw_by_hour": curtailed_renewable_by_hour,
+        "replacement_energy_kw_by_hour": replacement_energy_by_hour,
+        "transfer_north_to_south_kw_by_hour": transfer_north_to_south_by_hour,
+        "transfer_south_to_north_kw_by_hour": transfer_south_to_north_by_hour,
         "peak_demand_kw": float(peak_demand_kw),
         "peak_supply_kw": float(peak_supply_kw),
         "min_reserve_margin": float(min_reserve_margin),

@@ -49,6 +49,11 @@ def _result(
     total_charge_kw: float = 0.0,
     total_discharge_kw: float = 0.0,
     renewable_supply_after_battery: float = 0.0,
+    exported_kw: float = 0.0,
+    curtailed_renewable_kw: float = 0.0,
+    replacement_energy_kw: float = 0.0,
+    constraint_payment: float = 0.0,
+    replacement_energy_cost: float = 0.0,
     inj_hour_assignments: dict[str, tuple[float, float]] | None = None,
     prod_hour_kwh: dict[str, float] | None = None,
 ) -> TickResult:
@@ -67,6 +72,11 @@ def _result(
         total_charge_kw=total_charge_kw,
         total_discharge_kw=total_discharge_kw,
         renewable_supply_after_battery=renewable_supply_after_battery,
+        exported_kw=exported_kw,
+        curtailed_renewable_kw=curtailed_renewable_kw,
+        replacement_energy_kw=replacement_energy_kw,
+        constraint_payment=constraint_payment,
+        replacement_energy_cost=replacement_energy_cost,
         inj_hour_assignments=inj_hour_assignments or {},
         prod_hour_kwh=prod_hour_kwh or {},
     )
@@ -135,7 +145,12 @@ def test_brownout_charges_flat_plus_ramp_on_unserved_share() -> None:
     state = _state()
     commit_tick(
         state,
-        _result(balance=BalanceState.BROWNOUT, demand_kw=100.0, supply_kw=80.0),
+        _result(
+            balance=BalanceState.BROWNOUT,
+            demand_kw=100.0,
+            supply_kw=80.0,
+            served_kw=80.0,
+        ),
     )
     assert state.today.brownout_hours == pytest.approx(1.0)
     assert state.today.blackout_hours == 0.0
@@ -149,7 +164,12 @@ def test_brownout_caps_at_outage_penalty_hour_near_blackout_boundary() -> None:
     state = _state()
     commit_tick(
         state,
-        _result(balance=BalanceState.BROWNOUT, demand_kw=100.0, supply_kw=70.0),
+        _result(
+            balance=BalanceState.BROWNOUT,
+            demand_kw=100.0,
+            supply_kw=70.0,
+            served_kw=70.0,
+        ),
     )
     assert state.today.outage_penalty == pytest.approx(state.outage_penalty_hour)
 
@@ -187,7 +207,7 @@ def test_power_revenue_caps_billable_at_supply_when_undersupplied() -> None:
     assert state.today.power_revenue == pytest.approx(500.0 * state.grid_price_retail)
 
 
-def test_curtailment_adds_export_revenue_on_excess() -> None:
+def test_curtailment_adds_export_revenue_on_exported_kwh() -> None:
     state = _state()
     commit_tick(
         state,
@@ -197,10 +217,42 @@ def test_curtailment_adds_export_revenue_on_excess() -> None:
             civilian_demand_kw=600.0,
             served_kw=600.0,
             excess_kw=400.0,
+            exported_kw=250.0,
         ),
     )
-    expected = 600.0 * state.grid_price_retail + 400.0 * state.grid_price_export
+    expected = 600.0 * state.grid_price_retail + 250.0 * state.grid_price_export
     assert state.today.power_revenue == pytest.approx(expected)
+    assert state.today.retail_power_revenue == pytest.approx(600.0 * state.grid_price_retail)
+    assert state.today.export_revenue == pytest.approx(250.0 * state.grid_price_export)
+    assert state.today.exported_kwh == pytest.approx(250.0)
+
+
+def test_constrained_curtailment_is_not_paid_as_export() -> None:
+    state = _state()
+    commit_tick(
+        state,
+        _result(
+            balance=BalanceState.CURTAILMENT,
+            supply_kw=1000.0,
+            civilian_demand_kw=600.0,
+            served_kw=600.0,
+            excess_kw=400.0,
+            exported_kw=0.0,
+            curtailed_renewable_kw=400.0,
+            replacement_energy_kw=90.0,
+            constraint_payment=24.0,
+            replacement_energy_cost=16.2,
+        ),
+    )
+    expected = 600.0 * state.grid_price_retail
+    assert state.today.power_revenue == pytest.approx(expected)
+    assert state.today.export_revenue == 0.0
+    assert state.today.curtailed_renewable_kwh == pytest.approx(400.0)
+    assert state.today.replacement_energy_kwh == pytest.approx(90.0)
+    assert state.today.constraint_payment == pytest.approx(24.0)
+    assert state.today.replacement_energy_cost == pytest.approx(16.2)
+    assert state.cumulative_curtailed_renewable_kwh == pytest.approx(400.0)
+    assert state.cumulative_replacement_energy_kwh == pytest.approx(90.0)
 
 
 # --- Renewable share -------------------------------------------------------

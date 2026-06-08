@@ -30,6 +30,11 @@ class Config:
     carbon_price: float
     grid_price_retail: float
     grid_price_export: float
+    grid_transfer_capacity_kw: float
+    grid_external_export_capacity_kw: float
+    transmission_line_capacity_kw: float
+    curtailment_compensation_per_kwh: float
+    replacement_energy_cost_per_kwh: float
     base_growth_rate: float
     outage_penalty_hour: float
     brownout_flat_penalty_hour: float
@@ -53,6 +58,11 @@ def load_config() -> Config:
         carbon_price=_float("CARBON_PRICE_USD_PER_TON", 25.0),
         grid_price_retail=_float("GRID_PRICE_RETAIL", 0.08),
         grid_price_export=_float("GRID_PRICE_EXPORT", 0.04),
+        grid_transfer_capacity_kw=_float("GRID_TRANSFER_CAPACITY_KW", 1_000_000.0),
+        grid_external_export_capacity_kw=_float("GRID_EXTERNAL_EXPORT_CAPACITY_KW", 1_000_000.0),
+        transmission_line_capacity_kw=_float("TRANSMISSION_LINE_CAPACITY_KW", 250.0),
+        curtailment_compensation_per_kwh=_float("CURTAILMENT_COMPENSATION_PER_KWH", 0.0),
+        replacement_energy_cost_per_kwh=_float("REPLACEMENT_ENERGY_COST_PER_KWH", 0.0),
         base_growth_rate=_float("BASE_GROWTH_RATE", 0.025),
         outage_penalty_hour=_float("OUTAGE_PENALTY_HOUR", 4000),
         brownout_flat_penalty_hour=_float("BROWNOUT_FLAT_PENALTY_HOUR", 1000),

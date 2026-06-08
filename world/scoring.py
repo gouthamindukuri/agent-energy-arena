@@ -180,6 +180,9 @@ def compute_score(
     cum_total = float(latest["cumulative_total_served_kwh"])
     renewable_share = cum_renewable / max(cum_total, 1.0)
     R = min(1.0, renewable_share / RENEWABLE_TARGET)
+    cum_curtailed_renewable = float(latest.get("cumulative_curtailed_renewable_kwh", 0.0))
+    cum_replacement_energy = float(latest.get("cumulative_replacement_energy_kwh", 0.0))
+    grid_efficiency = cum_total / max(cum_total + cum_curtailed_renewable, 1.0)
 
     solvency = sum(1 for t in treasury if t > 0.0) / n
 
@@ -217,6 +220,9 @@ def compute_score(
             "axis_happy": float(axis_happy),
             "R": float(R),
             "renewable_share": float(renewable_share),
+            "grid_efficiency": float(grid_efficiency),
+            "cumulative_curtailed_renewable_kwh": float(cum_curtailed_renewable),
+            "cumulative_replacement_energy_kwh": float(cum_replacement_energy),
             "solvency": float(solvency),
             "longevity": float(longevity),
         },

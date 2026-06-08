@@ -30,7 +30,7 @@ only one commits.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from world import workforce
@@ -42,12 +42,19 @@ from world.power import (
     R_BROWNOUT,
     battery_charge_step,
     battery_discharge_step,
-    compute_balance_state,
     dispatch,
     total_demand_kw,
 )
 from world.snapshots import BalanceState, BySourceKw, PowerNow, WeatherNow
 from world.subsurface import INJECTION_KWH_PER_BBL, PRODUCTION_KWH_PER_BBL, Q_MAX_WELL_BBL_DAY
+from world.transmission import (
+    apply_transmission_constraints,
+    empty_zone_split,
+    zonal_civilian_demand_kw,
+    zonal_renewable_supply_kw,
+    zonal_supply_kw,
+    zone_for_xy,
+)
 
 if TYPE_CHECKING:
     from world.state import WorldState
@@ -91,9 +98,23 @@ class TickResult:
     total_charge_kw: float
     total_discharge_kw: float
     renewable_supply_after_battery: float
+    charge_kw_by_battery: dict[str, float] = field(default_factory=dict)
+    discharge_kw_by_battery: dict[str, float] = field(default_factory=dict)
     # Well-side (caller commits per-day accumulators)
-    inj_hour_assignments: dict[str, tuple[float, float]]  # well_id -> (kW, bbl)
-    prod_hour_kwh: dict[str, float]  # well_id -> kWh delivered this hour
+    inj_hour_assignments: dict[str, tuple[float, float]] = field(
+        default_factory=dict
+    )  # well_id -> (kW, bbl)
+    prod_hour_kwh: dict[str, float] = field(default_factory=dict)  # well_id -> kWh delivered
+    # Grid-constraint side
+    exported_kw: float = 0.0
+    curtailed_renewable_kw: float = 0.0
+    replacement_energy_kw: float = 0.0
+    constraint_payment: float = 0.0
+    replacement_energy_cost: float = 0.0
+    transfer_north_to_south_kw: float = 0.0
+    transfer_south_to_north_kw: float = 0.0
+    demand_by_zone: dict[str, float] = field(default_factory=dict)
+    supply_by_zone: dict[str, float] = field(default_factory=dict)
 
 
 def hourly_tick(
@@ -134,6 +155,9 @@ def hourly_tick(
     """
     civilian_demand_kw = total_demand_kw(state, hour)
 
+    demand_by_zone = zonal_civilian_demand_kw(state, hour)
+    process_demand_by_zone = empty_zone_split()
+
     # DR-on-injection (PRD §"Demand-response on injection wells"). Each
     # injection well's power for THIS hour is set by the PREVIOUS hour's
     # balance state, breaking the otherwise-circular dependency between
@@ -155,6 +179,7 @@ def hourly_tick(
         bbl_this_hour = power_kw / INJECTION_KWH_PER_BBL
         inj_hour_assignments[iw.id] = (power_kw, bbl_this_hour)
         inj_total_kw += power_kw
+        process_demand_by_zone[zone_for_xy(state, iw.x, iw.y)] += power_kw
 
     # Production-well power coupling (economy-rebalance slice 07): each
     # producer draws `setpoint × PRODUCTION_KWH_PER_BBL / 24 × eff` at
@@ -172,16 +197,21 @@ def hourly_tick(
         )
         prod_hour_kwh[pw.id] = power_kw
         prod_total_kw += power_kw
+        process_demand_by_zone[zone_for_xy(state, pw.x, pw.y)] += power_kw
 
     # Refinery process load (slice 09): hourly kW = yesterday's actual
     # throughput × KWH_PER_BBL / 24. The 1-day lag mirrors DR injection.
-    refinery_process_load_kw = sum(
-        refinery_process_kw(t.current_throughput_bbl_day)
-        for t in state.tiles
-        if t.type == "refinery" and t.operational
-    )
+    refinery_process_load_kw = 0.0
+    for t in state.tiles:
+        if t.type != "refinery" or not t.operational:
+            continue
+        load_kw = refinery_process_kw(t.current_throughput_bbl_day)
+        refinery_process_load_kw += load_kw
+        process_demand_by_zone[zone_for_xy(state, t.x, t.y)] += load_kw
 
     demand_kw = civilian_demand_kw + inj_total_kw + prod_total_kw + refinery_process_load_kw
+    for zone, process_kw in process_demand_by_zone.items():
+        demand_by_zone[zone] = demand_by_zone.get(zone, 0.0) + process_kw
 
     # Gas peakers must share a 4-connected pipeline network with at
     # least one operational refinery to dispatch this hour. Filtered
@@ -211,11 +241,11 @@ def hourly_tick(
     # (solar+wind, after demand) enters batteries.
     batteries = [t for t in state.tiles if t.type == "battery"]
     renewable_supply_kw = by_source.get("solar", 0.0) + by_source.get("wind", 0.0)
-    _charges, total_charge_kw, charge_socs = battery_charge_step(
+    charges, total_charge_kw, charge_socs = battery_charge_step(
         batteries, renewable_supply_kw, demand_kw
     )
     residual_demand_kw = max(0.0, demand_kw - supply_kw)
-    _discharges, total_discharge_kw, discharge_socs = battery_discharge_step(
+    discharges, total_discharge_kw, discharge_socs = battery_discharge_step(
         batteries, residual_demand_kw
     )
 
@@ -223,7 +253,19 @@ def hourly_tick(
     # renewable kWh that would otherwise have been curtailed, discharge
     # adds delivered kWh to supply.
     net_supply_kw = supply_kw - total_charge_kw + total_discharge_kw
-    balance, served_kw, excess_kw, _r = compute_balance_state(net_supply_kw, demand_kw)
+    supply_by_zone = zonal_supply_kw(state, plants, outputs, charges, discharges)
+    renewable_by_zone = zonal_renewable_supply_kw(state, plants, outputs, charges, discharges)
+    constraint = apply_transmission_constraints(
+        state,
+        demand_by_zone=demand_by_zone,
+        supply_by_zone=supply_by_zone,
+        renewable_supply_by_zone=renewable_by_zone,
+    )
+
+    balance = constraint.balance
+    served_kw = constraint.served_kw
+    excess_kw = constraint.excess_kw
+    net_supply_kw = constraint.supply_kw
 
     renewable_supply_after_battery = renewable_supply_kw - total_charge_kw + total_discharge_kw
 
@@ -241,8 +283,19 @@ def hourly_tick(
         total_charge_kw=total_charge_kw,
         total_discharge_kw=total_discharge_kw,
         renewable_supply_after_battery=renewable_supply_after_battery,
+        charge_kw_by_battery=charges,
+        discharge_kw_by_battery=discharges,
         inj_hour_assignments=inj_hour_assignments,
         prod_hour_kwh=prod_hour_kwh,
+        exported_kw=constraint.exported_kw,
+        curtailed_renewable_kw=constraint.curtailed_renewable_kw,
+        replacement_energy_kw=constraint.replacement_energy_kw,
+        constraint_payment=constraint.constraint_payment,
+        replacement_energy_cost=constraint.replacement_energy_cost,
+        transfer_north_to_south_kw=constraint.transfer_north_to_south_kw,
+        transfer_south_to_north_kw=constraint.transfer_south_to_north_kw,
+        demand_by_zone=constraint.demand_by_zone,
+        supply_by_zone=constraint.supply_by_zone,
     )
 
 
@@ -286,27 +339,44 @@ def commit_tick(state: WorldState, result: TickResult) -> None:
         today.brownout_hours += 1.0
         unserved_share = 0.0
         if result.demand_kw > 0.0:
-            unserved_share = max(0.0, 1.0 - result.supply_kw / result.demand_kw)
+            unserved_share = max(0.0, 1.0 - result.served_kw / result.demand_kw)
         flat = state.brownout_flat_penalty_hour
         cap = state.outage_penalty_hour
         ramp = (cap - flat) / (1.0 - R_BROWNOUT)
         today.outage_penalty += min(cap, flat + ramp * unserved_share)
 
     # Power revenue. Process loads (injection wells, refinery) are
-    # unbilled; only civilian kWh × retail. Curtailment exports the
-    # post-injection surplus at the export tariff.
-    billable_served_kw = min(result.supply_kw, result.civilian_demand_kw)
-    today.power_revenue += billable_served_kw * state.grid_price_retail
-    if result.balance is BalanceState.CURTAILMENT and result.excess_kw > 0:
-        today.power_revenue += result.excess_kw * state.grid_price_export
+    # unbilled; only civilian kWh × retail. Explicit export kWh is priced
+    # separately so constrained curtailment is no longer confused with saleable
+    # external-grid energy.
+    billable_served_kw = min(result.served_kw, result.civilian_demand_kw)
+    retail_revenue = billable_served_kw * state.grid_price_retail
+    export_revenue = result.exported_kw * state.grid_price_export
+    today.retail_power_revenue += retail_revenue
+    today.export_revenue += export_revenue
+    today.power_revenue += retail_revenue + export_revenue
+
+    today.exported_kwh += result.exported_kw
+    today.curtailed_renewable_kwh += result.curtailed_renewable_kw
+    today.replacement_energy_kwh += result.replacement_energy_kw
+    today.constraint_payment += result.constraint_payment
+    today.replacement_energy_cost += result.replacement_energy_cost
+    today.transfer_north_to_south_kwh += result.transfer_north_to_south_kw
+    today.transfer_south_to_north_kwh += result.transfer_south_to_north_kw
 
     # Renewable-share accumulator (PRD §"Scoring"). Battery accounting:
     # charged kWh subtracted from renewable supply (charge step happens
     # before discharge), discharged kWh added back as 100% renewable —
     # round-trip losses vanish from both numerator and denominator.
-    renewable_served_kw = min(result.renewable_supply_after_battery, result.served_kw)
+    renewable_available_for_served_kw = max(
+        0.0, result.renewable_supply_after_battery - result.curtailed_renewable_kw
+    )
+    renewable_served_kw = min(renewable_available_for_served_kw, result.served_kw)
     state.cumulative_total_served_kwh += result.served_kw
     state.cumulative_renewable_served_kwh += renewable_served_kw
+    state.cumulative_exported_kwh += result.exported_kw
+    state.cumulative_curtailed_renewable_kwh += result.curtailed_renewable_kw
+    state.cumulative_replacement_energy_kwh += result.replacement_energy_kw
 
     # DR injection commits — bbl actually delivered and total kWh drawn.
     # If supply collapsed mid-hour, injectors still contributed their

@@ -124,6 +124,8 @@ class DayLedger(BaseModel):
     # --- Rollups ----------------------------------------------------------
     tax_revenue: float = 0.0
     power_revenue: float = 0.0
+    retail_power_revenue: float = 0.0
+    export_revenue: float = 0.0
     oil_revenue: float = 0.0
     crude_revenue: float = 0.0
     refined_revenue: float = 0.0
@@ -137,6 +139,13 @@ class DayLedger(BaseModel):
     blackout_hours: float = 0.0
     brownout_hours: float = 0.0
     outage_penalty: float = 0.0
+    exported_kwh: float = 0.0
+    curtailed_renewable_kwh: float = 0.0
+    replacement_energy_kwh: float = 0.0
+    constraint_payment: float = 0.0
+    replacement_energy_cost: float = 0.0
+    transfer_north_to_south_kwh: float = 0.0
+    transfer_south_to_north_kwh: float = 0.0
     renewable_share: float = 0.0
     injection_kw: float = 0.0
     production_kw: float = 0.0

@@ -152,7 +152,9 @@ def _select_agents(raw: str, *, include_archived: bool) -> tuple[str, ...]:
     if unknown:
         raise ValueError(f"unknown agents: {unknown}; choices: {sorted(FINALISTS)}")
     if not include_archived:
-        selected = tuple(agent_id for agent_id in selected if FINALISTS[agent_id].mode != "archived")
+        selected = tuple(
+            agent_id for agent_id in selected if FINALISTS[agent_id].mode != "archived"
+        )
     return selected
 
 
@@ -175,7 +177,9 @@ def _run_module_agent(job: dict[str, Any]) -> dict[str, Any]:
     assert finalist.module is not None
     scenario = str(job["scenario"])
     seed = int(job["seed"])
-    with tempfile.TemporaryDirectory(prefix=f"{finalist.agent_id}-{scenario.rsplit('.', 1)[-1]}-{seed}-") as temp:
+    with tempfile.TemporaryDirectory(
+        prefix=f"{finalist.agent_id}-{scenario.rsplit('.', 1)[-1]}-{seed}-"
+    ) as temp:
         env = os.environ.copy()
         env["PYTHONPATH"] = str(root)
         command = [
@@ -432,6 +436,8 @@ def _cem_snapshot(world: World) -> dict[str, float]:
         "happiness": float(state.happiness),
         "cumulative_renewable_served_kwh": float(state.cumulative_renewable_served_kwh),
         "cumulative_total_served_kwh": float(state.cumulative_total_served_kwh),
+        "cumulative_curtailed_renewable_kwh": float(state.cumulative_curtailed_renewable_kwh),
+        "cumulative_replacement_energy_kwh": float(state.cumulative_replacement_energy_kwh),
     }
 
 
@@ -488,11 +494,7 @@ def _write_outputs(out_dir: Path, rows: list[dict[str, Any]], started_at: float)
         },
         "by_agent_scenario": {
             f"{agent_id}|{scenario}": _stats(
-                [
-                    row
-                    for row in rows
-                    if row["agent_id"] == agent_id and row["scenario"] == scenario
-                ]
+                [row for row in rows if row["agent_id"] == agent_id and row["scenario"] == scenario]
             )
             for agent_id in sorted({row["agent_id"] for row in rows})
             for scenario in sorted({row["scenario"] for row in rows})

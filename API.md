@@ -91,6 +91,13 @@ Returns the full world snapshot.
     "demand_kw": 1840, "supply_kw": 1880, "balance_state": "balanced",
     "by_source_kw": {"solar": 320, "wind": 410, "gas": 800, "coal": 350}
   },
+  "grid_constraints": {
+    "grid_transfer_capacity_kw": 1000000.0,
+    "grid_external_export_capacity_kw": 1000000.0,
+    "transmission_line_capacity_kw": 250.0,
+    "curtailment_compensation_per_kwh": 0.0,
+    "replacement_energy_cost_per_kwh": 0.0
+  },
   "last_day_supply_kw_by_hour": [...],
   "last_day_demand_kw_by_hour": [...],
   "last_day_balance_state_by_hour": [...],
@@ -98,6 +105,9 @@ Returns the full world snapshot.
   "today": {...},
   "cumulative_renewable_served_kwh": 1234567.0,
   "cumulative_total_served_kwh": 2345678.0,
+  "cumulative_exported_kwh": 12345.0,
+  "cumulative_curtailed_renewable_kwh": 0.0,
+  "cumulative_replacement_energy_kwh": 0.0,
   "pipeline_networks": [...],
   "orphan_well_ids": [],
   "orphan_refinery_ids": []
@@ -141,7 +151,7 @@ Returns an empty slice (`{"day_start": day, "day_end": day, "entries": []}`) whe
 Discovers the dotted paths of every `Scenario` subclass under `scenarios/`. Powers the UI scenario picker.
 
 ```json
-{ "scenarios": ["scenarios.baseline", "scenarios.economy_stress", "scenarios.grid_stress"] }
+{ "scenarios": ["scenarios.baseline", "scenarios.constraint_stress", "scenarios.economy_stress", "scenarios.grid_stress"] }
 ```
 
 ### `GET /run`
@@ -192,6 +202,11 @@ Returns the machine-readable build catalog. Shape:
     "commercial_radius": 2,
     "carbon_price": 25.0,
     "grid_price_retail": 0.08, "grid_price_export": 0.04,
+    "grid_transfer_capacity_kw": 1000000.0,
+    "grid_external_export_capacity_kw": 1000000.0,
+    "transmission_line_capacity_kw": 250.0,
+    "curtailment_compensation_per_kwh": 0.0,
+    "replacement_energy_cost_per_kwh": 0.0,
     "refined_price_usd_per_bbl": 90.0,
     "refinery_yield": 0.85, "refinery_co2_t_per_bbl": 0.3, "refinery_max_bbl_day": 250.0,
     "crude_price_usd_per_bbl": 40.0,

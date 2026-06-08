@@ -130,6 +130,11 @@ class WorldState:
     refined_price_usd_per_bbl: float = 90.0
     grid_price_retail: float = 0.08
     grid_price_export: float = 0.04
+    grid_transfer_capacity_kw: float = 1_000_000.0
+    grid_external_export_capacity_kw: float = 1_000_000.0
+    transmission_line_capacity_kw: float = 250.0
+    curtailment_compensation_per_kwh: float = 0.0
+    replacement_energy_cost_per_kwh: float = 0.0
     industrial_revenue_per_day: float = 500.0
     commercial_revenue_per_resident_per_day: float = 2.0
     daily_tax_per_capita: float = 4.0
@@ -145,6 +150,9 @@ class WorldState:
     # to the external grid) is excluded from BOTH numerator and denominator.
     cumulative_renewable_served_kwh: float = 0.0
     cumulative_total_served_kwh: float = 0.0
+    cumulative_exported_kwh: float = 0.0
+    cumulative_curtailed_renewable_kwh: float = 0.0
+    cumulative_replacement_energy_kwh: float = 0.0
 
     # Hourly snapshots. Both are whole-value replaced per tick; never
     # mutated in place. See world/snapshots.py and ADR-0003.

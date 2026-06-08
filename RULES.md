@@ -67,13 +67,14 @@ CAPEX is paid up-front at build time; OPEX is deducted daily as long as the tile
 | `injection_well` | 30,000 base | 50 | Injection well. Setpoint 0–200 bbl/day. Power 50 kWh/bbl (shed during brownout/blackout, 2× during curtailment). Drilled via `/drill`; quadratic depth-CAPEX. |
 | `refinery` | 150,000 | 300 | +25 jobs. Up to 250 bbl/day. 200 kWh/bbl. 0.3 t CO₂/bbl. Road-adjacent. |
 | `pipeline` | 2,000 | 5 | Crude transport. Routes producer→refinery on the 4-connected component. |
+| `transmission_line` | 35,000 | 25 | Grid reinforcement. Adds north/south transfer capacity under constraint-aware scenarios. |
 | `town_hall` | n/a | 0 | Placed at start. Immutable. +100 housing, +30 jobs. |
 
 Adjacency rules:
 
 - `house`, `commercial`, `industrial`, `refinery` must be orthogonally adjacent to a road tile or to another civilian tile that is itself road-connected via 4-connected flood-fill from any road. The town hall counts as a road. Coal plants are road-required for the same reason.
 - Plants, batteries, and wells do not require road adjacency. Pipelines define their own 4-connected crude-transport network.
-- `coal_plant`, `gas_peaker`, and `wind_turbine` each impose a one-cell no-build halo on the 8-neighborhood. Roads and batteries are admitted inside the halo (so plants can still be serviced and storage co-located); the town hall is admitted on the same grounds as a road. Existing tiles that already violate the rule at world-load time are grandfathered — the check only runs at build time.
+- `coal_plant`, `gas_peaker`, and `wind_turbine` each impose a one-cell no-build halo on the 8-neighborhood. Roads, batteries, pipelines, and transmission lines are admitted inside the halo (so plants can still be serviced, connected, and storage co-located); the town hall is admitted on the same grounds as a road. Existing tiles that already violate the rule at world-load time are grandfathered — the check only runs at build time.
 - Wells are placed via `/drill`, not `/build`; the call specifies `target_z`. Two wells may share the same surface tile **only** if their `target_z` differs by ≥ 3 voxels (stacked completion); otherwise the call returns `completion_overlap`. A road or other built tile at (x, y) returns `tile_occupied` regardless of depth.
 
 Validity errors returned by mutating endpoints: `insufficient_funds`, `tile_occupied`, `completion_overlap`, `out_of_bounds`, `no_road_adjacency`, `spacing_violation`, `voxel_out_of_bounds`, `unknown_tile_type`, and a handful of endpoint-specific cases (see [API.md](API.md)). `spacing_violation` carries the offending neighbor's `(x, y)` in the `result` field.
@@ -130,7 +131,7 @@ Forecasts are independently sampled per call from a dedicated `forecast_rng` str
 
 ## Demand
 
-Implementation: `world/power.py`.
+Implementation: `world/power.py`, `world/transmission.py`, `world/hourly_tick.py`.
 
 ```
 PER_CAPITA_KW = 0.333                          # 8 kWh/day/person ≈ 0.333 kW continuous
@@ -165,19 +166,45 @@ Each hour, dispatch fires in order:
 5. **Gas peakers.** Cheapest fuel cost first; ramp room `capacity · GAS_RAMP_PER_HOUR` (0.50).
 6. **Per-plant overrides.** `POST /control/plant` setpoints (when wired) clamp Step 4/5 outcomes.
 
-With `R = supply / max(demand, 1)`:
+By default, transfer/export capacity is effectively unconstrained, so the grid
+behaves like the original single-bus model. Constraint-aware scenarios can lower
+`state.grid_transfer_capacity_kw` and `state.grid_external_export_capacity_kw`.
+When that happens, the map is split into north/south zones at the town-hall row:
+
+- Residential demand is allocated by housing capacity in each zone.
+- Commercial, industrial, refinery, well, plant, and battery load/supply use the
+  tile or well's map location.
+- Existing `transmission_line` tiles add `state.transmission_line_capacity_kw`
+  to the north/south transfer limit.
+- If one zone has surplus and the other has deficit beyond transfer capacity,
+  replacement energy serves only the deficit that coexists with stranded surplus.
+  A true generation shortage still causes brownout/blackout.
+- Saleable external export is capped by `state.grid_external_export_capacity_kw`;
+  non-exported renewable surplus accrues `constraint_payment`.
+
+With `R = served_or_available_supply / max(demand, 1)`:
 
 ```
-R ≥ 1.15:   state = "curtailment"  served = demand   surplus exported at grid_price_export
+R ≥ 1.15:   state = "curtailment"  served = demand   exported surplus earns grid_price_export
 R ≥ 0.95:   state = "balanced"     served = demand
 R ≥ 0.70:   state = "brownout"     served = supply   happiness -= 0.05·(1-R)
 R <  0.70:  state = "blackout"     served = supply   happiness -= 0.20
                                                      treasury  -= state.blackout_penalty_hour
 ```
 
-Curtailed kWh sold to the external grid (`grid_price_export`, default $0.04/kWh) does **not** contribute to the renewable share denominator — only kWh actually served to local load count toward `R` in the score formula.
+Exported kWh (`grid_price_export`, default $0.04/kWh) does **not** contribute to
+the renewable share denominator — only kWh actually served to local load count
+toward `R` in the score formula. Constraint curtailment is separate from export:
+it records stranded renewable kWh and can debit treasury through
+`curtailment_compensation_per_kwh`.
 
-Per-source dispatch totals land in `state.power_now.by_source_kw` and the hourly arrays `last_day_supply_kw_by_hour`, `last_day_demand_kw_by_hour`, and `last_day_balance_state_by_hour`.
+Per-source dispatch totals land in `state.power_now.by_source_kw` and the hourly
+arrays `last_day_supply_kw_by_hour`, `last_day_demand_kw_by_hour`, and
+`last_day_balance_state_by_hour`. Constraint metrics land in `state.today`
+(`exported_kwh`, `curtailed_renewable_kwh`, `replacement_energy_kwh`,
+`constraint_payment`, `replacement_energy_cost`,
+`transfer_north_to_south_kwh`, `transfer_south_to_north_kwh`) and cumulative
+state fields for replay/scoring diagnostics.
 
 ## Batteries
 
@@ -390,26 +417,36 @@ State-mutable rates (`world/state.py`):
 | `crude_price_usd_per_bbl` | 40.0 | unrouted crude sale price |
 | `refined_price_usd_per_bbl` | 90.0 | refined product sale price |
 | `grid_price_retail` | 0.08 $/kWh | local power served price |
-| `grid_price_export` | 0.04 $/kWh | curtailment export price |
-| `blackout_penalty_hour` | 5000 | $/hour deducted while balance_state = blackout |
+| `grid_price_export` | 0.04 $/kWh | saleable external export price |
+| `grid_transfer_capacity_kw` | 1,000,000 | north/south transfer limit before upgrades |
+| `grid_external_export_capacity_kw` | 1,000,000 | cap on saleable external export |
+| `transmission_line_capacity_kw` | 250 | transfer capacity added by each `transmission_line` |
+| `curtailment_compensation_per_kwh` | 0.0 | cost for stranded renewable curtailment |
+| `replacement_energy_cost_per_kwh` | 0.0 | cost for redispatch/replacement energy |
+| `outage_penalty_hour` | 4000 | $/hour deducted while balance_state = blackout |
+| `brownout_flat_penalty_hour` | 1000 | brownout penalty floor before unserved-share ramp |
 | `plant_fuel_cost_per_mwh` | `{coal:12, gas:30}` | fuel cost paid against served MWh |
 
-Daily P&L (see `state.today_summary_so_far` and the `/step` summary):
+Daily P&L (see `state.today` and the `/step` summary):
 
 ```
 tax_revenue        = pop · daily_tax_per_capita
-power_revenue      = served_local_kwh · grid_price_retail
-                   + curtailed_exported_kwh · grid_price_export
+retail_power_revenue = served_local_kwh · grid_price_retail
+export_revenue       = exported_kwh · grid_price_export
+power_revenue        = retail_power_revenue + export_revenue
 oil_revenue        = crude_direct·crude_price + refined·refined_price
 industrial_revenue = staffed_industrial_slots · industrial_revenue_per_day
 commercial_revenue = Σ over commercial tiles
 opex               = Σ tile.opex_per_day
 fuel_cost          = Σ plant.kwh_served_yesterday · fuel_cost_per_mwh[type] / 1000
 carbon_cost        = daily_emissions_t · carbon_price
-blackout_penalty   = blackout_hours · blackout_penalty_hour
+outage_penalty     = blackout/brownout hourly penalties
+constraint_payment = curtailed_renewable_kwh · curtailment_compensation_per_kwh
+replacement_energy_cost = replacement_energy_kwh · replacement_energy_cost_per_kwh
 
 delta              = tax + power + oil + industrial + commercial
-                   - opex - fuel - carbon - blackout - capex_today
+                   - opex - fuel - carbon - outage
+                   - constraint_payment - replacement_energy_cost - capex_today
 ```
 
 ## Events

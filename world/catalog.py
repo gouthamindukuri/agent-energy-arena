@@ -96,6 +96,18 @@ TILE_CATALOG: dict[str, TileSpec] = {
         requires_road=False,
         description="Crude transport. 4-connected networks route producer crude to refineries on the same network; orphan producers sell raw at $40/bbl; orphan refineries starve.",
     ),
+    "transmission_line": TileSpec(
+        tile_type="transmission_line",
+        capex=35_000,
+        opex_per_day=25,
+        requires_road=False,
+        description=(
+            "Grid reinforcement. Adds transfer capacity between the north and "
+            "south grid zones under constraint-stress scenarios."
+        ),
+        jobs=1,
+        capacity_kw=250,
+    ),
     "solar_farm": TileSpec(
         tile_type="solar_farm",
         capex=25_000,
@@ -292,6 +304,11 @@ def build_catalog() -> dict[str, Any]:
         "carbon_price": CARBON_PRICE_USD_PER_TON,
         "grid_price_retail": cfg.grid_price_retail,
         "grid_price_export": cfg.grid_price_export,
+        "grid_transfer_capacity_kw": cfg.grid_transfer_capacity_kw,
+        "grid_external_export_capacity_kw": cfg.grid_external_export_capacity_kw,
+        "transmission_line_capacity_kw": cfg.transmission_line_capacity_kw,
+        "curtailment_compensation_per_kwh": cfg.curtailment_compensation_per_kwh,
+        "replacement_energy_cost_per_kwh": cfg.replacement_energy_cost_per_kwh,
         "refined_price_usd_per_bbl": REFINED_PRICE_USD_PER_BBL,
         "refinery_yield": REFINERY_YIELD,
         "refinery_co2_t_per_bbl": REFINERY_CO2_PER_BBL,

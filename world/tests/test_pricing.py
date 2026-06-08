@@ -852,6 +852,17 @@ def test_catalog_economics_exposes_grid_prices() -> None:
     eco = cat["economics"]
     assert eco["grid_price_retail"] == pytest.approx(cfg.grid_price_retail)
     assert eco["grid_price_export"] == pytest.approx(cfg.grid_price_export)
+    assert eco["grid_transfer_capacity_kw"] == pytest.approx(cfg.grid_transfer_capacity_kw)
+    assert eco["grid_external_export_capacity_kw"] == pytest.approx(
+        cfg.grid_external_export_capacity_kw
+    )
+    assert eco["transmission_line_capacity_kw"] == pytest.approx(cfg.transmission_line_capacity_kw)
+    assert eco["curtailment_compensation_per_kwh"] == pytest.approx(
+        cfg.curtailment_compensation_per_kwh
+    )
+    assert eco["replacement_energy_cost_per_kwh"] == pytest.approx(
+        cfg.replacement_energy_cost_per_kwh
+    )
 
 
 # =========================================================================
@@ -1163,6 +1174,17 @@ def test_state_carries_pricing_default_fields() -> None:
     assert s.refined_price_usd_per_bbl == pytest.approx(REFINED_PRICE_USD_PER_BBL)
     assert s.grid_price_retail == pytest.approx(w.config.grid_price_retail)
     assert s.grid_price_export == pytest.approx(w.config.grid_price_export)
+    assert s.grid_transfer_capacity_kw == pytest.approx(w.config.grid_transfer_capacity_kw)
+    assert s.grid_external_export_capacity_kw == pytest.approx(
+        w.config.grid_external_export_capacity_kw
+    )
+    assert s.transmission_line_capacity_kw == pytest.approx(w.config.transmission_line_capacity_kw)
+    assert s.curtailment_compensation_per_kwh == pytest.approx(
+        w.config.curtailment_compensation_per_kwh
+    )
+    assert s.replacement_energy_cost_per_kwh == pytest.approx(
+        w.config.replacement_energy_cost_per_kwh
+    )
     assert s.industrial_revenue_per_day == pytest.approx(INDUSTRIAL_REVENUE_PER_DAY)
     assert s.commercial_revenue_per_resident_per_day == pytest.approx(
         COMMERCIAL_REVENUE_PER_RESIDENT_PER_DAY

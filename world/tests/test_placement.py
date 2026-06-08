@@ -1,9 +1,10 @@
 """Placement spacing matrix (economy-rebalance 10).
 
 Coal, gas, and wind generators each impose a one-cell no-build halo on
-the 8-neighborhood. Roads and batteries are admitted inside the halo so
-plants can still be serviced and storage co-located. Solar and battery
-candidates impose no halo of their own.
+the 8-neighborhood. Roads, batteries, pipelines, and transmission lines
+are admitted inside the halo so plants can still be serviced, connected,
+and storage co-located. Solar and battery candidates impose no halo of
+their own.
 
 Pure-function surface: `validate(candidate_type, candidate_coords, tiles)
 -> offending_neighbor | None`. Existing tiles violating the rule at
@@ -46,13 +47,16 @@ def test_halo_types_are_coal_gas_wind() -> None:
     assert frozenset({"coal_plant", "gas_peaker", "wind_turbine"}) == HALO_TYPES
 
 
-def test_admitted_neighbors_are_road_battery_pipeline() -> None:
+def test_admitted_neighbors_are_road_battery_pipeline_transmission() -> None:
     # town_hall is road-network-equivalent (see world.grid.ROAD_TYPES), so a
     # halo'd plant adjacent to town hall is admitted on the same grounds.
     # Pipelines are admitted because a gas peaker's dispatch rule (see
     # world.pipelines) requires a pipeline neighbor — the halo must let
     # one in or the peaker can never be fed.
-    assert frozenset({"road", "battery", "town_hall", "pipeline"}) == HALO_ADMITTED_NEIGHBORS
+    assert (
+        frozenset({"road", "battery", "town_hall", "pipeline", "transmission_line"})
+        == HALO_ADMITTED_NEIGHBORS
+    )
 
 
 # -- Pure-function validate -------------------------------------------------

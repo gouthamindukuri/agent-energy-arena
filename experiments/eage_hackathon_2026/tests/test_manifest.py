@@ -206,3 +206,20 @@ def test_manifest_records_exact_evaluation_matrix() -> None:
         "workers": 10,
         "validator": "experiments/eage_hackathon_2026/validate_results.py",
     }
+
+
+def test_publication_has_one_discoverable_canonical_document() -> None:
+    publication = (REPO_ROOT / "EAGE_HACKATHON_2026.md").read_text()
+    readme = (REPO_ROOT / "README.md").read_text()
+
+    assert "[Prometheus winning solution](EAGE_HACKATHON_2026.md)" in readme
+    assert "experiments/eage_hackathon_2026/manifest.json" in publication
+    assert "agents/finalists/registry.py" in publication
+    assert "--list-agents" in publication
+    assert "--agents all" in publication
+    assert "agents.finalists.safe_adaptive" in publication
+    assert "--agents risk-aware-growth,safe-adaptive,oil-exploration" in publication
+    assert "--seeds <SEED>" in publication
+    assert "uv lock --check" in publication
+    assert not (REPO_ROOT / "FINALISTS.md").exists()
+    assert not (REPO_ROOT / "REPRODUCE.md").exists()

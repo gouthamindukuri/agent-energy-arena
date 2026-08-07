@@ -10,6 +10,10 @@ Each team of 3 has to submit the following:
 2. A contribution to the world. This can be a new world component, mechanics, or something that makes the world more interesting (leverage your domain knowledge).
 3. A detailed analysis of the agent's behavior and the world balance.
 
+The [Prometheus winning solution](EAGE_HACKATHON_2026.md) includes the exact
+submitted controller, preserved result evidence, provenance, and reproduction
+commands for EAGE Hackthon 2026.
+
 ![gameplay_gif](docs/energy_game_gameplay-optimized.gif)
 
 ## Quickstart

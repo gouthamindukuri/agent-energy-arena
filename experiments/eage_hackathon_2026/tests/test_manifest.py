@@ -199,6 +199,13 @@ def test_manifest_records_exact_evaluation_matrix() -> None:
     assert evaluation["archived_run"] == {
         "agent": "submit.agent",
         "workers": 15,
+        "worker_count_provenance": {
+            "status": "documented_in_original_package",
+            "source": (
+                "NOTES.md reproduction command from the canonical EAGE_Final_Submission package"
+            ),
+            "tracked_in_repository": False,
+        },
         "evidence": "experiments/eage_hackathon_2026/results/score90_best_summary.json",
     }
     assert evaluation["maintained_reproduction"] == {
@@ -213,6 +220,8 @@ def test_publication_has_one_discoverable_canonical_document() -> None:
     readme = (REPO_ROOT / "README.md").read_text()
 
     assert "[Prometheus winning solution](EAGE_HACKATHON_2026.md)" in readme
+    assert "EAGE 2026 Hackathon" not in readme
+    assert "EAGE Hackthon 2026" in readme
     assert "experiments/eage_hackathon_2026/manifest.json" in publication
     assert "agents/finalists/registry.py" in publication
     assert "--list-agents" in publication

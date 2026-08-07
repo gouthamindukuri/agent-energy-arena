@@ -4,7 +4,7 @@ You run a city day-by-day. Every day a set of decisions are made by the agent an
 
 The world is the single source of truth — a browser UI and AI agents both talk to the same HTTP API. Full mechanics: [RULES.md](RULES.md) and [API.md](API.md). 
 
-## The EAGE 2026 Hackathon challenge
+## The EAGE Hackthon 2026 challenge
 Each team of 3 has to submit the following:
 1. An agent that can play the game autonomosly for 2 simulated years. The agent will be evaluated against a set of scenarios. The more days it survives and prospers within the given simulation time budget the better. The agent may be LLM, rule, XGBoost, RL-based, etc -- be creative. 
 2. A contribution to the world. This can be a new world component, mechanics, or something that makes the world more interesting (leverage your domain knowledge).
@@ -122,7 +122,7 @@ Worth a PR:
 
 
 ## Credits
-The `agent-energy-arena` is constructed by Oleg Ovcharenko for the EAGE 2026 Hackathon organized by EAGE AI Committee. Claude Code with skills by Matt Pocock is the primary development method. 
+The `agent-energy-arena` is constructed by Oleg Ovcharenko for EAGE Hackthon 2026 organized by EAGE AI Committee. Claude Code with skills by Matt Pocock is the primary development method.
 
 The idea of the agentic energy challenge in a virtual tile-based world is by Roderick Perez.
 

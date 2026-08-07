@@ -221,5 +221,20 @@ def test_publication_has_one_discoverable_canonical_document() -> None:
     assert "--agents risk-aware-growth,safe-adaptive,oil-exploration" in publication
     assert "--seeds <SEED>" in publication
     assert "uv lock --check" in publication
+    expected_comparison_rows = (
+        "| Risk-Aware Growth | 434 | 343.9 | $2,648,441 | 1.000 |",
+        "| Safe Adaptive fallback | 308 | 315.1 | $1,936,851 | 1.000 |",
+        "| Stable renewable mix | 156 | 156.0 | $2,747,149 | 1.000 |",
+        "| Oil exploration | 437 | 298.8 | $157,623 | 0.816 |",
+        "| Adaptive safety aggressive | 400 | 309.3 | $785,606 | 0.784 |",
+        "| CEM survival | 36 | 39.7 | -$171,827 | 0.970 |",
+        "| CEM population | 90 | 87.2 | -$833,020 | 0.531 |",
+    )
+    for row in expected_comparison_rows:
+        assert row in publication
+    assert (
+        "worker contention can affect\nwhether a constrained machine reaches the "
+        "3650-day horizon before the wall-time\nlimit."
+    ) in publication
     assert not (REPO_ROOT / "FINALISTS.md").exists()
     assert not (REPO_ROOT / "REPRODUCE.md").exists()

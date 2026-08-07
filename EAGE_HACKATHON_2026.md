@@ -21,6 +21,12 @@ The same policy is available in the main agent tree as [`agents.finalists.risk_a
 
 The name is slightly confusing. The submitted Python class is named `SafeAdaptiveGrowthAgent`, while the final policy was presented as Risk-Aware Growth or Score90. It is different from the older `safe-adaptive` finalist.
 
+The three archived submission source files match the retained canonical local
+submission package byte-for-byte, as recorded by their per-file SHA-256 values
+in the manifest. No organizer-authenticated upload receipt was found, so "exact
+submission" here means exact source identity with that retained package rather
+than independent authentication by the event organizer.
+
 ## Source and commit provenance
 
 The fork is based on upstream commit `397ecb991f644a2631293b8a6db9d4d44960f826`.
@@ -73,10 +79,11 @@ pressure. Completed cases are deterministic, but worker contention can affect
 whether a constrained machine reaches the 3650-day horizon before the wall-time
 limit.
 
-The 15-worker count comes from the reproduction command in the original
-package's `NOTES.md`. The archived CSV and JSON result files do not encode the
-worker count, and that package-level note is not part of this compact repository
-archive. The manifest records this evidence status explicitly.
+The 15-worker count and 600-second per-case budget come from the reproduction
+command in the original package's `NOTES.md`. The archived CSV and JSON result
+files do not encode that launch metadata, and the package-level note is not part
+of this compact repository archive. The manifest records its SHA-256 and
+evidence status explicitly.
 
 The policy does not read the seed or scenario name. It reacts to state returned by the simulator: treasury, population, active events, plant failures, and the next-day power preview.
 

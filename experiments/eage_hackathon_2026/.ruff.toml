@@ -1,0 +1,2 @@
+extend = "../../pyproject.toml"
+exclude = ["final_submission"]

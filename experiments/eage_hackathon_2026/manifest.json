@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "event": "EAGE Hackthon 2026",
+  "team": "Prometheus",
+  "repository": {
+    "upstream": "https://github.com/ovcharenkoo/agent-energy-arena",
+    "fork": "https://github.com/gouthamindukuri/agent-energy-arena",
+    "upstream_base": "397ecb991f644a2631293b8a6db9d4d44960f826",
+    "fork_main_commits": [
+      {
+        "sha": "c781a78a43942ceba5ea785959311c06db82b06e",
+        "subject": "Add finalist agents and evaluation runner",
+        "role": "Prometheus finalist source and comparison tooling"
+      },
+      {
+        "sha": "a86045d0e26979e03cd35a07c410b22dfe4034fe",
+        "subject": "Merge branch 'ovcharenkoo:main' into main",
+        "role": "Upstream synchronization merge"
+      },
+      {
+        "sha": "6f0b38b0fa75ce9ebfd686cfae065cdeed494da2",
+        "subject": "[verified] docs: publish EAGE winning solution (#1)",
+        "role": "Winning submission publication"
+      }
+    ],
+    "research_commits": [
+      {
+        "sha": "cf41dda598d0269aa94c343f6bccce7c540bbba7",
+        "subject": "Save oil hardened agent research checkpoint",
+        "integration": "local branch; superseded by the preserved oil-exploration finalist lineage"
+      },
+      {
+        "sha": "e7cf0cbe873ed1970124505301fcf0d871ee5879",
+        "subject": "Save V3 coal18 house-heavy agent",
+        "integration": "local branch; superseded historical V3 checkpoint represented in the oil-exploration finalist lineage"
+      },
+      {
+        "sha": "e39be8088c905f83a5ca23e47f8621079c2388f1",
+        "subject": "Add grid constraint environment scenario",
+        "integration": "origin/env-grid-constraints; follow-up blocked by a baseline revenue and score regression"
+      },
+      {
+        "sha": "8e51d5dbd1df9568e119093cb60a6b335ff7fc71",
+        "subject": "Add prompt-improved LLM agent",
+        "integration": "origin/llm-smart-qwen; follow-up requires current-base validation and Ruff formatting"
+      }
+    ]
+  },
+  "winning_submission": {
+    "presentation_name": "Risk-Aware Growth",
+    "source_lineage": "Score90",
+    "entrypoint_module": "submit.agent",
+    "entrypoint": "experiments/eage_hackathon_2026/final_submission/submit/agent.py",
+    "exported_name": "Agent",
+    "implementation": "experiments/eage_hackathon_2026/final_submission/submit/safe_adaptive_growth_agent.py",
+    "implementation_class": "SafeAdaptiveGrowthAgent",
+    "sha256": "2e884ec93b60176f49d00a3d485321d3c772a9b413b3aff3ce06b3d921991676",
+    "submitted_files": {
+      "experiments/eage_hackathon_2026/final_submission/submit/__init__.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "experiments/eage_hackathon_2026/final_submission/submit/agent.py": "834efd0d9e3dc5fad2fc909922051c769e03b7dc5a83918730899a9ac5f31112",
+      "experiments/eage_hackathon_2026/final_submission/submit/safe_adaptive_growth_agent.py": "2e884ec93b60176f49d00a3d485321d3c772a9b413b3aff3ce06b3d921991676"
+    },
+    "maintained_equivalent": "agents/finalists/risk_aware_growth.py",
+    "relationship": "The maintained finalist is a semantically equivalent naming, formatting, and control-flow consolidation of the submitted strategy; the final_submission package preserves the submitted bytes.",
+    "evaluation": {
+      "matrix": {
+        "seeds": [
+          1,
+          42,
+          101,
+          112,
+          777
+        ],
+        "scenarios": [
+          "baseline",
+          "economy_stress",
+          "grid_stress"
+        ],
+        "horizon_days": 3650,
+        "time_budget_seconds": 600,
+        "cases": 15
+      },
+      "archived_run": {
+        "agent": "submit.agent",
+        "workers": 15,
+        "evidence": "experiments/eage_hackathon_2026/results/score90_best_summary.json"
+      },
+      "maintained_reproduction": {
+        "agent": "risk-aware-growth",
+        "workers": 10,
+        "validator": "experiments/eage_hackathon_2026/validate_results.py"
+      }
+    },
+    "artifacts": [
+      "experiments/eage_hackathon_2026/final_submission/submit/__init__.py",
+      "experiments/eage_hackathon_2026/final_submission/submit/agent.py",
+      "experiments/eage_hackathon_2026/final_submission/submit/safe_adaptive_growth_agent.py",
+      "experiments/eage_hackathon_2026/results/score90_best_results.csv",
+      "experiments/eage_hackathon_2026/results/score90_best_summary.json",
+      "experiments/eage_hackathon_2026/validate_results.py"
+    ]
+  },
+  "approaches": [
+    {
+      "id": "risk-aware-growth",
+      "name": "Risk-Aware Growth",
+      "mode": "module",
+      "source": "agents/finalists/risk_aware_growth.py",
+      "runnable": true,
+      "provenance_commit": "c781a78a43942ceba5ea785959311c06db82b06e",
+      "evidence": "experiments/eage_hackathon_2026/results/score90_best_results.csv",
+      "evidence_status": "preserved row-level final matrix"
+    },
+    {
+      "id": "safe-adaptive",
+      "name": "Safe Adaptive",
+      "mode": "module",
+      "source": "agents/finalists/safe_adaptive.py",
+      "runnable": true,
+      "provenance_commit": "c781a78a43942ceba5ea785959311c06db82b06e",
+      "evidence": null,
+      "evidence_status": "aggregate values reported in the canonical document; compact row-level artifact not committed"
+    },
+    {
+      "id": "renewables-mix",
+      "name": "Renewables Mix",
+      "mode": "module",
+      "source": "agents/finalists/renewables_mix/agent.py",
+      "runnable": true,
+      "provenance_commit": "c781a78a43942ceba5ea785959311c06db82b06e",
+      "evidence": null,
+      "evidence_status": "aggregate values reported in the canonical document; compact row-level artifact not committed"
+    },
+    {
+      "id": "oil-exploration",
+      "name": "Oil Exploration",
+      "mode": "module",
+      "source": "agents/finalists/oil_exploration/agent_oil_6.py",
+      "runnable": true,
+      "provenance_commit": "c781a78a43942ceba5ea785959311c06db82b06e",
+      "evidence": null,
+      "evidence_status": "aggregate values reported in the canonical document; compact row-level artifact not committed"
+    },
+    {
+      "id": "safety-first",
+      "name": "Safety First",
+      "mode": "module",
+      "source": "agents/finalists/safety_first.py",
+      "runnable": true,
+      "provenance_commit": "c781a78a43942ceba5ea785959311c06db82b06e",
+      "evidence": null,
+      "evidence_status": "aggregate values reported in the canonical document; compact row-level artifact not committed"
+    },
+    {
+      "id": "cem-rl-survival",
+      "name": "CEM RL Survival",
+      "mode": "cem",
+      "source": "agents/finalists/cem_policies/cem_full_survival.npz",
+      "runnable": true,
+      "provenance_commit": "c781a78a43942ceba5ea785959311c06db82b06e",
+      "evidence": null,
+      "evidence_status": "policy preserved; aggregate values reported in the canonical document"
+    },
+    {
+      "id": "cem-rl-population",
+      "name": "CEM RL Population",
+      "mode": "cem",
+      "source": "agents/finalists/cem_policies/cem_population_weighted.npz",
+      "runnable": true,
+      "provenance_commit": "c781a78a43942ceba5ea785959311c06db82b06e",
+      "evidence": null,
+      "evidence_status": "policy preserved; aggregate values reported in the canonical document"
+    },
+    {
+      "id": "ppo-rl",
+      "name": "PPO RL",
+      "mode": "archived",
+      "source": null,
+      "runnable": false,
+      "provenance_commit": "c781a78a43942ceba5ea785959311c06db82b06e",
+      "evidence": null,
+      "evidence_status": "historical aggregate only",
+      "evidence_gap": "The competitive PPO checkpoint and row-level comparison output were not preserved as a runnable finalist."
+    }
+  ]
+}

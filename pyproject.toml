@@ -31,7 +31,12 @@ include = ["world*", "agents*", "scenarios*"]
 exclude = ["world.tests*", "agents.tests*", "scenarios.tests*", "submit*"]
 
 [tool.pytest.ini_options]
-testpaths = ["world/tests", "agents/tests", "scenarios/tests"]
+testpaths = [
+    "world/tests",
+    "agents/tests",
+    "scenarios/tests",
+    "experiments/eage_hackathon_2026/tests",
+]
 # `-m 'not live'` keeps `make check` offline — live tests need network +
 # vendor API keys. Opt in with `pytest -m live`.
 addopts = "-q -m 'not live'"

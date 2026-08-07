@@ -21,6 +21,24 @@ The same policy is available in the main agent tree as [`agents.finalists.risk_a
 
 The name is slightly confusing. The submitted Python class is named `SafeAdaptiveGrowthAgent`, while the final policy was presented as Risk-Aware Growth or Score90. It is different from the older `safe-adaptive` finalist.
 
+## Source and commit provenance
+
+The fork is based on upstream commit `397ecb991f644a2631293b8a6db9d4d44960f826`.
+The Prometheus changes already on the fork's `main` branch are preserved as
+normal Git history rather than rewritten into one publication commit:
+
+| Commit | Purpose |
+| --- | --- |
+| `c781a78` | Adds the maintained finalist agents and comparison runner |
+| `a86045d` | Merges the current upstream branch into the fork |
+| `6f0b38b` | Publishes the exact submission, result evidence, validator, tests, and this document |
+
+Other committed research remains on separate branches until it can be reviewed
+without mixing world mechanics, LLM experiments, and finalist code. The
+[machine-readable manifest](experiments/eage_hackathon_2026/manifest.json)
+records those commits, the exact submission hash, every preserved finalist,
+and known evidence gaps.
+
 ## How the game is scored
 
 The simulator starts with $300,000, a population of 100, a town hall, seven roads, and one coal plant. An agent has to grow the city without running out of money or losing power.
@@ -49,6 +67,12 @@ Seeds:     1, 42, 101, 112, 777
 Budget:    600 seconds per case
 ```
 
+The archived package launched the 15 independent cases with 15 workers. The
+maintained reproduction command below uses 10 workers to reduce local resource
+pressure. Completed cases are deterministic, but worker contention can affect
+whether a constrained machine reaches the 3650-day horizon before the wall-time
+limit.
+
 The policy does not read the seed or scenario name. It reacts to state returned by the simulator: treasury, population, active events, plant failures, and the next-day power preview.
 
 There are two different horizons in the repository:
@@ -61,6 +85,114 @@ Our published near-90 result is from the 600-second wall-time evaluation. The de
 ## Experiment path
 
 We kept the useful finalists in [`agents/finalists`](agents/finalists). The full development process used separate worktrees, but copying every worktree here would make the repository harder to understand and harder to run. Early figures in this section come from development notes; the final 15-case result is the archived and reproducible benchmark.
+
+### Preserved finalist registry
+
+[`agents/finalists/registry.py`](agents/finalists/registry.py) is the runtime
+source of truth for finalist IDs and module or policy paths. The provenance
+manifest adds evidence status without coupling the evaluator to publication
+metadata.
+
+| Agent ID | Registry target | Source status | Result evidence |
+| --- | --- | --- | --- |
+| `risk-aware-growth` | `agents.finalists.risk_aware_growth` | Maintained equivalent of the submitted policy | Preserved 15-case rows and summary |
+| `safe-adaptive` | `agents.finalists.safe_adaptive` | Runnable deterministic finalist | Aggregate comparison only |
+| `renewables-mix` | `agents.finalists.renewables_mix.agent` | Runnable deterministic finalist | Aggregate comparison only |
+| `oil-exploration` | `agents.finalists.oil_exploration.agent_oil_6` | Runnable deterministic finalist | Aggregate comparison only |
+| `safety-first` | `agents.finalists.safety_first` | Runnable deterministic finalist | Aggregate comparison only |
+| `cem-rl-survival` | `cem_full_survival.npz` | Runnable through the matrix runner | Aggregate comparison only |
+| `cem-rl-population` | `cem_population_weighted.npz` | Runnable through the matrix runner | Aggregate comparison only |
+| `ppo-rl` | No runnable target | No finalist checkpoint | Historical aggregate only |
+
+List the registry without starting a simulation:
+
+```bash
+uv run python tools/finalist_eval.py --list-agents
+```
+
+Smoke-test every runnable finalist on one short case:
+
+```bash
+uv run python tools/finalist_eval.py \
+  --agents all \
+  --seeds 1 \
+  --scenarios baseline \
+  --days 30 \
+  --no-time-budget \
+  --workers 4 \
+  --out-dir /tmp/eage-finalists-smoke
+```
+
+Each matrix run writes `results.csv`, `results.jsonl`, and `summary.json` to
+the selected output directory. If `--out-dir` is omitted, the runner creates a
+timestamped directory under `runs/finalist_eval/`; `runs/` is ignored by Git.
+The runner prints the selected output directory when the matrix finishes.
+Scenario names may be short, such as `baseline`, or dotted, such as
+`scenarios.baseline`.
+
+Module finalists can also run directly through `evaluate.py`. Replace the
+module below with any Python-module target in the registry table:
+
+```bash
+uv run python evaluate.py \
+  --agent agents.finalists.safe_adaptive \
+  --scenario scenarios.baseline \
+  --seed 112 \
+  --time-budget 600
+```
+
+The CEM policies are not `BaseAgent` modules and must use
+`tools/finalist_eval.py`.
+
+For a newly revealed seed and scenario, run both horizons:
+
+```bash
+uv run python tools/finalist_eval.py \
+  --agents all \
+  --seeds <SEED> \
+  --scenarios <SCENARIO> \
+  --days 730 \
+  --no-time-budget \
+  --workers 7
+
+uv run python tools/finalist_eval.py \
+  --agents all \
+  --seeds <SEED> \
+  --scenarios <SCENARIO> \
+  --time-budget 600 \
+  --workers 7
+```
+
+To repeat the complete comparison, use the same five seeds and three scenarios
+with either the fixed or wall-time horizon:
+
+```bash
+uv run python tools/finalist_eval.py \
+  --agents all \
+  --seeds 1,42,101,112,777 \
+  --scenarios baseline,economy_stress,grid_stress \
+  --days 730 \
+  --no-time-budget \
+  --workers 10
+
+uv run python tools/finalist_eval.py \
+  --agents all \
+  --seeds 1,42,101,112,777 \
+  --scenarios baseline,economy_stress,grid_stress \
+  --time-budget 600 \
+  --workers 10
+```
+
+For a smaller practical comparison:
+
+```bash
+uv run python tools/finalist_eval.py \
+  --agents risk-aware-growth,safe-adaptive,oil-exploration \
+  --seeds 1,42,101,112,777 \
+  --scenarios baseline,economy_stress,grid_stress \
+  --time-budget 600 \
+  --workers 10
+```
 
 ### Stable renewable city
 
@@ -236,6 +368,19 @@ Days:       3650
 | CEM population | 60.50 | 60.60 | 57.83 | 64.62 | Persistent debt |
 | PPO artifact | 29.80 | n/a | 21.23 | n/a | Not competitive |
 
+The retained comparison notes also recorded these scale and safety metrics:
+
+| Approach | Median population | Mean population | Mean treasury | Mean solvency |
+| --- | ---: | ---: | ---: | ---: |
+| Risk-Aware Growth | 434 | 343.9 | $2,648,441 | 1.000 |
+| Safe Adaptive fallback | 308 | 315.1 | $1,936,851 | 1.000 |
+| Stable renewable mix | 156 | 156.0 | $2,747,149 | 1.000 |
+| Oil exploration | 437 | 298.8 | $157,623 | 0.816 |
+| Adaptive safety aggressive | 400 | 309.3 | $785,606 | 0.784 |
+| CEM survival | 36 | 39.7 | -$171,827 | 0.970 |
+| CEM population | 90 | 87.2 | -$833,020 | 0.531 |
+| PPO artifact | 17.5 | n/a | n/a | low |
+
 ## Reproduce the result
 
 ### 1. Clone and install
@@ -326,6 +471,17 @@ uv run python evaluate.py \
   --days 30
 ```
 
+Before publishing repository changes, verify the lockfile, focused publication
+tests, finalist registry, and exact package checks:
+
+```bash
+uv lock --check
+uv run pytest \
+  agents/tests/test_finalist_registry.py \
+  experiments/eage_hackathon_2026/tests
+uv run python tools/finalist_eval.py --list-agents
+```
+
 ## Result provenance and known reporting issue
 
 The official summary and CSV came from the final June 8 matrix. Each case ran in its own temporary directory, so the exported run IDs are not unique and the temporary daily traces no longer exist. The per-case scores, final states, and aggregate metrics were retained.
@@ -339,7 +495,9 @@ The old CSV also contains `housing_capacity` and `jobs_total`, which the current
 | Path | Purpose |
 | --- | --- |
 | [`agents/finalists/risk_aware_growth.py`](agents/finalists/risk_aware_growth.py) | Maintained winning policy |
+| [`agents/finalists/registry.py`](agents/finalists/registry.py) | Stable finalist IDs and source paths |
 | [`tools/finalist_eval.py`](tools/finalist_eval.py) | Current matrix runner |
+| [`experiments/eage_hackathon_2026/manifest.json`](experiments/eage_hackathon_2026/manifest.json) | Commit, source, artifact, and evidence provenance |
 | [`experiments/eage_hackathon_2026/final_submission`](experiments/eage_hackathon_2026/final_submission) | Exact submitted source snapshot |
 | [`experiments/eage_hackathon_2026/results`](experiments/eage_hackathon_2026/results) | Original compact result files |
 | [`experiments/eage_hackathon_2026/validate_results.py`](experiments/eage_hackathon_2026/validate_results.py) | Result checker |

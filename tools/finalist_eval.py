@@ -38,91 +38,21 @@ import sys
 import tempfile
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 import numpy as np
 
 from agents.finalists.cem_action_space import ACTIONS as CEM_ACTIONS
 from agents.finalists.cem_action_space import apply_action, legal_action_mask
+from agents.finalists.registry import FINALISTS, RUNNABLE_IDS
 from world.scenario import load_scenario
 from world.scoring import compute_score
 from world.sim import World
 
-Mode = Literal["module", "cem", "archived"]
-
 DEFAULT_SEEDS = (1, 42, 101, 112, 777)
 DEFAULT_SCENARIOS = ("scenarios.baseline", "scenarios.economy_stress", "scenarios.grid_stress")
-
-
-@dataclass(frozen=True)
-class Finalist:
-    agent_id: str
-    name: str
-    mode: Mode
-    module: str | None = None
-    policy: str | None = None
-    note: str = ""
-
-
-FINALISTS: dict[str, Finalist] = {
-    "risk-aware-growth": Finalist(
-        agent_id="risk-aware-growth",
-        name="Risk-Aware Growth",
-        mode="module",
-        module="agents.finalists.risk_aware_growth",
-        note="Final submission candidate.",
-    ),
-    "safe-adaptive": Finalist(
-        agent_id="safe-adaptive",
-        name="Safe Adaptive",
-        mode="module",
-        module="agents.finalists.safe_adaptive",
-    ),
-    "renewables-mix": Finalist(
-        agent_id="renewables-mix",
-        name="Renewables Mix",
-        mode="module",
-        module="agents.finalists.renewables_mix.agent",
-    ),
-    "oil-exploration": Finalist(
-        agent_id="oil-exploration",
-        name="Oil Exploration",
-        mode="module",
-        module="agents.finalists.oil_exploration.agent_oil_6",
-    ),
-    "safety-first": Finalist(
-        agent_id="safety-first",
-        name="Safety First",
-        mode="module",
-        module="agents.finalists.safety_first",
-        note="Defaults to the aggressive_safety policy.",
-    ),
-    "cem-rl-survival": Finalist(
-        agent_id="cem-rl-survival",
-        name="CEM RL Survival",
-        mode="cem",
-        policy="agents/finalists/cem_policies/cem_full_survival.npz",
-    ),
-    "cem-rl-population": Finalist(
-        agent_id="cem-rl-population",
-        name="CEM RL Population",
-        mode="cem",
-        policy="agents/finalists/cem_policies/cem_population_weighted.npz",
-    ),
-    "ppo-rl": Finalist(
-        agent_id="ppo-rl",
-        name="PPO RL",
-        mode="archived",
-        note="Historical only: the competitive checkpoint was not preserved as a runnable finalist.",
-    ),
-}
-
-RUNNABLE_IDS = tuple(
-    agent_id for agent_id, finalist in FINALISTS.items() if finalist.mode != "archived"
-)
 
 
 def _repo_root() -> Path:
@@ -152,7 +82,9 @@ def _select_agents(raw: str, *, include_archived: bool) -> tuple[str, ...]:
     if unknown:
         raise ValueError(f"unknown agents: {unknown}; choices: {sorted(FINALISTS)}")
     if not include_archived:
-        selected = tuple(agent_id for agent_id in selected if FINALISTS[agent_id].mode != "archived")
+        selected = tuple(
+            agent_id for agent_id in selected if FINALISTS[agent_id].mode != "archived"
+        )
     return selected
 
 
@@ -175,7 +107,9 @@ def _run_module_agent(job: dict[str, Any]) -> dict[str, Any]:
     assert finalist.module is not None
     scenario = str(job["scenario"])
     seed = int(job["seed"])
-    with tempfile.TemporaryDirectory(prefix=f"{finalist.agent_id}-{scenario.rsplit('.', 1)[-1]}-{seed}-") as temp:
+    with tempfile.TemporaryDirectory(
+        prefix=f"{finalist.agent_id}-{scenario.rsplit('.', 1)[-1]}-{seed}-"
+    ) as temp:
         env = os.environ.copy()
         env["PYTHONPATH"] = str(root)
         command = [
@@ -488,11 +422,7 @@ def _write_outputs(out_dir: Path, rows: list[dict[str, Any]], started_at: float)
         },
         "by_agent_scenario": {
             f"{agent_id}|{scenario}": _stats(
-                [
-                    row
-                    for row in rows
-                    if row["agent_id"] == agent_id and row["scenario"] == scenario
-                ]
+                [row for row in rows if row["agent_id"] == agent_id and row["scenario"] == scenario]
             )
             for agent_id in sorted({row["agent_id"] for row in rows})
             for scenario in sorted({row["scenario"] for row in rows})

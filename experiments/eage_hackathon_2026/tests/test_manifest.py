@@ -134,6 +134,13 @@ def test_manifest_pins_exact_submission() -> None:
     assert submission["implementation_class"] == "SafeAdaptiveGrowthAgent"
     assert submission["sha256"] == EXPECTED_SUBMISSION_HASH
     assert submission["submitted_files"] == EXPECTED_SUBMISSION_FILES
+    assert submission["submission_identity"] == {
+        "status": "matched_canonical_local_package",
+        "verification": (
+            "Per-file SHA-256 identity with the retained EAGE_Final_Submission package"
+        ),
+        "organizer_authenticated_upload_receipt_available": False,
+    }
     for relative_path, expected_hash in EXPECTED_SUBMISSION_FILES.items():
         with (REPO_ROOT / relative_path).open("rb") as handle:
             assert hashlib.file_digest(handle, "sha256").hexdigest() == expected_hash
@@ -199,11 +206,13 @@ def test_manifest_records_exact_evaluation_matrix() -> None:
     assert evaluation["archived_run"] == {
         "agent": "submit.agent",
         "workers": 15,
-        "worker_count_provenance": {
+        "launch_command_provenance": {
             "status": "documented_in_original_package",
             "source": (
                 "NOTES.md reproduction command from the canonical EAGE_Final_Submission package"
             ),
+            "source_sha256": ("594410f1e50406cedd710d5fa23f08a9eb3f6875ad5aa76ee35d8d77fa6ed2ba"),
+            "supports": ["workers", "time_budget_seconds"],
             "tracked_in_repository": False,
         },
         "evidence": "experiments/eage_hackathon_2026/results/score90_best_summary.json",

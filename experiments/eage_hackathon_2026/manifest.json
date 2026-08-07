@@ -60,6 +60,11 @@
       "experiments/eage_hackathon_2026/final_submission/submit/agent.py": "834efd0d9e3dc5fad2fc909922051c769e03b7dc5a83918730899a9ac5f31112",
       "experiments/eage_hackathon_2026/final_submission/submit/safe_adaptive_growth_agent.py": "2e884ec93b60176f49d00a3d485321d3c772a9b413b3aff3ce06b3d921991676"
     },
+    "submission_identity": {
+      "status": "matched_canonical_local_package",
+      "verification": "Per-file SHA-256 identity with the retained EAGE_Final_Submission package",
+      "organizer_authenticated_upload_receipt_available": false
+    },
     "maintained_equivalent": "agents/finalists/risk_aware_growth.py",
     "relationship": "The maintained finalist is a semantically equivalent naming, formatting, and control-flow consolidation of the submitted strategy; the final_submission package preserves the submitted bytes.",
     "evaluation": {
@@ -83,9 +88,14 @@
       "archived_run": {
         "agent": "submit.agent",
         "workers": 15,
-        "worker_count_provenance": {
+        "launch_command_provenance": {
           "status": "documented_in_original_package",
           "source": "NOTES.md reproduction command from the canonical EAGE_Final_Submission package",
+          "source_sha256": "594410f1e50406cedd710d5fa23f08a9eb3f6875ad5aa76ee35d8d77fa6ed2ba",
+          "supports": [
+            "workers",
+            "time_budget_seconds"
+          ],
           "tracked_in_repository": false
         },
         "evidence": "experiments/eage_hackathon_2026/results/score90_best_summary.json"

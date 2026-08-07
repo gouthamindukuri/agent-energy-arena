@@ -83,6 +83,11 @@
       "archived_run": {
         "agent": "submit.agent",
         "workers": 15,
+        "worker_count_provenance": {
+          "status": "documented_in_original_package",
+          "source": "NOTES.md reproduction command from the canonical EAGE_Final_Submission package",
+          "tracked_in_repository": false
+        },
         "evidence": "experiments/eage_hackathon_2026/results/score90_best_summary.json"
       },
       "maintained_reproduction": {
